@@ -532,8 +532,9 @@ html,body,#root{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grays
 <script>
 const KEY='our-forever-v1';
 const DEFAULT_DATA = {year:2026,memories:[],photos:[]};
-const EMBEDDED_DATA = (()=>{const node=document.getElementById('our-forever-export-data');if(node){try{return JSON.parse(node.textContent);}catch(e){}}return DEFAULT_DATA;})();
-const HAS_EMBEDDED_DATA = !!document.getElementById('our-forever-export-data');
+const EXPORT_DATA_NODES = [...document.querySelectorAll('#our-forever-export-data')];
+const EMBEDDED_DATA = (()=>{const node=EXPORT_DATA_NODES.at(-1);if(node){try{return JSON.parse(node.textContent);}catch(e){}}return DEFAULT_DATA;})();
+const HAS_EMBEDDED_DATA = EXPORT_DATA_NODES.length > 0;
 const notes=[
   'If I could choose a favourite place, it would be right beside you.',
   'You make ordinary days feel like the ones I want to remember.',
@@ -543,16 +544,28 @@ const notes=[
   'The best part of my day is any part I get to share with you.',
   'I don’t need every day to be perfect. I just want to keep doing life with you.'
 ];
-let data={...DEFAULT_DATA,...EMBEDDED_DATA};
-try {
-  const saved=JSON.parse(localStorage.getItem(KEY)||'null');
-  if(saved && typeof saved==='object'){
-    data={...DEFAULT_DATA,...EMBEDDED_DATA,...saved};
-    data.memories = Array.isArray(saved.memories) ? saved.memories : (Array.isArray(EMBEDDED_DATA.memories) ? EMBEDDED_DATA.memories : DEFAULT_DATA.memories);
-    data.photos = Array.isArray(saved.photos) ? saved.photos : (Array.isArray(EMBEDDED_DATA.photos) ? EMBEDDED_DATA.photos : DEFAULT_DATA.photos);
-  }
-} catch(e) {}
+let data={...DEFAULT_DATA};
+if(HAS_EMBEDDED_DATA){
+  data={...DEFAULT_DATA,...EMBEDDED_DATA};
+} else {
+  try {
+    const saved=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(saved && typeof saved==='object'){
+      data={...DEFAULT_DATA,...saved};
+    }
+  } catch(e) {}
+}
 const $=id=>document.getElementById(id);
+const pendingUploads = new Set();
+function readImageAsDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    pendingUploads.add(reader);
+    reader.onload=()=>{ pendingUploads.delete(reader); resolve(reader.result); };
+    reader.onerror=()=>{ pendingUploads.delete(reader); reject(reader.error || new Error('Image load failed')); };
+    reader.readAsDataURL(file);
+  });
+}
 function persist(){ try { localStorage.setItem(KEY,JSON.stringify(data)); } catch(e) { alert('Your browser storage is full. Try adding fewer or smaller photos.'); } }
 function startDate(){ return data.year?new Date(Number(data.year),9,15,0,0,0):null; }
 function updateCounter(){
@@ -571,10 +584,10 @@ $('setDate').onclick=()=>{ $('startYear').value=data.year||'';openModal('dateMod
 $('saveDate').onclick=()=>{const y=Number($('startYear').value);if(!y||y<1900||y>2100){alert('Please enter a valid year.');return;}if(new Date(y,9,15)>new Date()){alert('That date is in the future — check the year.');return;}data.year=y;persist();updateCounter();closeModal('dateModal');};
 function addMemory(){ $('memoryDate').value=new Date().toISOString().slice(0,10);$('memoryName').value='';$('memoryTagline').value='';$('memoryText').value='';$('memoryPhoto').value='';openModal('memoryModal'); }
 $('addMemory').onclick=addMemory;$('addMemoryTop').onclick=addMemory;
-$('saveMemory').onclick=async()=>{const title=$('memoryName').value.trim(),date=$('memoryDate').value,body=$('memoryText').value.trim(),tagline=$('memoryTagline').value.trim(),file=$('memoryPhoto').files[0];if(!title||!date){alert('Add a title and date for this memory.');return;}let photo='';if(file){if(!file.type.startsWith('image/')){alert('Please choose an image file.');return;}photo=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});}data.memories.push({id:Date.now(),title,date,body,tagline,photo});data.memories.sort((a,b)=>a.date.localeCompare(b.date));persist();renderTimeline();closeModal('memoryModal');};
+$('saveMemory').onclick=async()=>{const title=$('memoryName').value.trim(),date=$('memoryDate').value,body=$('memoryText').value.trim(),tagline=$('memoryTagline').value.trim(),file=$('memoryPhoto').files[0];if(!title||!date){alert('Add a title and date for this memory.');return;}let photo='';if(file){if(!file.type.startsWith('image/')){alert('Please choose an image file.');return;}photo=await readImageAsDataUrl(file);}data.memories.push({id:Date.now(),title,date,body,tagline,photo});data.memories.sort((a,b)=>a.date.localeCompare(b.date));persist();renderTimeline();closeModal('memoryModal');};
 function renderTimeline(){const host=$('timeline');host.innerHTML='';let items=[...(data.year?[{id:'start',date:`${data.year}-10-15`,title:'The beginning of us',body:'15 October — the day our story began. And what a beautiful story it is.'}]:[]),...data.memories];items.sort((a,b)=>a.date.localeCompare(b.date));if(!items.length){host.innerHTML='<div class="empty">Our timeline is waiting for its first memory. Add a moment to begin your story here. ♡</div>';return;}items.forEach(m=>{const el=document.createElement('article');el.className='memory';const time=document.createElement('time');time.textContent=new Date(m.date+'T12:00:00').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'});const h=document.createElement('h3');h.textContent=m.title;el.append(time,h);if(m.tagline){const tag=document.createElement('div');tag.className='tagline';tag.textContent=m.tagline;el.append(tag);}if(m.body){const p=document.createElement('p');p.textContent=m.body;el.append(p);}if(m.photo){const img=document.createElement('img');img.src=m.photo;img.alt=m.title+' memory';el.append(img);}host.append(el);});}
- $('exportStory').onclick=()=>{const exportData={year:data.year ?? DEFAULT_DATA.year, memories:Array.isArray(data.memories)?data.memories:[], photos:Array.isArray(data.photos)?data.photos:[]};const clone=document.documentElement.cloneNode(true);const payload=document.createElement('script');payload.id='our-forever-export-data';payload.type='application/json';payload.textContent=JSON.stringify(exportData).replace(/</g,'\\u003c');clone.querySelector('head').append(payload);const html='<!DOCTYPE html>\n'+clone.outerHTML;const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='our-forever.html';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);};
-$('photoInput').onchange=async e=>{const files=[...e.target.files];for(const file of files){if(!file.type.startsWith('image/'))continue;const url=await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(file);});data.photos.push({id:Date.now()+Math.random(),name:file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' '),url});}persist();renderPhotos();e.target.value='';};
+ $('exportStory').onclick=async()=>{await Promise.all([...pendingUploads]);const exportData={year:data.year ?? DEFAULT_DATA.year, memories:Array.isArray(data.memories)?data.memories:[], photos:Array.isArray(data.photos)?data.photos:[]};const clone=document.documentElement.cloneNode(true);clone.querySelectorAll('#our-forever-export-data').forEach(node=>node.remove());const payload=document.createElement('script');payload.id='our-forever-export-data';payload.type='application/json';payload.textContent=JSON.stringify(exportData).replace(/</g,'\\u003c');clone.querySelector('head').append(payload);const html='<!DOCTYPE html>\n'+clone.outerHTML;const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='our-forever.html';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);};
+$('photoInput').onchange=async e=>{const files=[...e.target.files];for(const file of files){if(!file.type.startsWith('image/'))continue;const url=await readImageAsDataUrl(file);data.photos.push({id:Date.now()+Math.random(),name:file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' '),url});}persist();renderPhotos();e.target.value='';};
 function renderPhotos(){const host=$('gallery');host.innerHTML='';if(!data.photos.length){host.innerHTML='<div class="empty" style="grid-column:1/-1">Your favourite smiles belong here. Add a few photos to make this little corner yours. ♡</div>';return;}data.photos.forEach(photo=>{const card=document.createElement('div');card.className='photo';const img=document.createElement('img');img.src=photo.url;img.alt=photo.name||'A memory together';const cap=document.createElement('span');cap.textContent=photo.name||'A favourite moment';card.append(img,cap);host.append(card);});}
 $('newNote').onclick=()=>{let next=notes[Math.floor(Math.random()*notes.length)];if(next===$('loveNote').textContent)next=notes[(notes.indexOf(next)+1)%notes.length];$('loveNote').textContent=next;};
 updateCounter();renderTimeline();renderPhotos();setInterval(updateCounter,1000);
