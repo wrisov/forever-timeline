@@ -23,7 +23,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm install
-      - run: npm run build
+      - name: Build React app
+        run: npm run build
+        env:
+          VITE_UPLOAD_API_URL: ${{ vars.VITE_UPLOAD_API_URL }}
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
