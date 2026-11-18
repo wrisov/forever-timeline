@@ -1,0 +1,58 @@
+[
+  {
+    "id": "first-photo",
+    "date": "2026-10-10",
+    "title": "Our first photo together..",
+    "tagline": "A little moment, kept forever",
+    "description": "",
+    "images": ["images/2026/firstphoto.jpeg"]
+  },
+  {
+    "id": "royal-orchid",
+    "date": "2026-10-11",
+    "title": "Our first stay at Royal Orchid..",
+    "tagline": "One more memory together",
+    "description": "",
+    "images": ["images/2026/orchid.jpeg"]
+  },
+  {
+    "id": "beginning-of-us",
+    "date": "2026-10-15",
+    "title": "The beginning of us",
+    "tagline": "The day our story began",
+    "description": "15 October — the day our story began. And what a beautiful story it is.",
+    "images": ["images/2026/firstlove.PNG"]
+  },
+  {
+    "id": "durga-pujo",
+    "date": "2026-10-16",
+    "title": "Our first Durga Pujo together..",
+    "tagline": "Festive lights and favourite company",
+    "description": "",
+    "images": ["images/2026/durgapuja.jpeg"]
+  },
+  {
+    "id": "ibis",
+    "date": "2026-10-17",
+    "title": "Our stay at Ibis..",
+    "tagline": "A little getaway",
+    "description": "",
+    "images": ["images/2026/ibis.jpeg"]
+  },
+  {
+    "id": "first-i-love-you",
+    "date": "2026-11-02",
+    "title": "First I love you from her...",
+    "tagline": "Words to remember",
+    "description": "",
+    "images": ["images/2026/iloveu.PNG"]
+  },
+  {
+    "id": "first-date",
+    "date": "2026-11-13",
+    "title": "Our first date..",
+    "tagline": "A day to remember",
+    "description": "",
+    "images": ["images/2026/firstdate.jpeg"]
+  }
+]
