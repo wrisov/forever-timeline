@@ -1,43 +1,61 @@
-# Forever Timeline — React migration
+# Forever Timeline
 
-React + Vite frontend for https://wrisov.github.io/forever-timeline/.
+A React + Vite timeline hosted on GitHub Pages.
 
-## What changes
-- Timeline content is loaded from `public/data/memories.json`.
-- Approved images are served from `public/images/`.
-- The public form sends image submissions to a Cloudflare Worker.
-- The Worker commits submissions under `images/pending/` and `submissions/`; they do **not** appear on the public timeline until reviewed and added to the approved memories JSON.
-- GitHub Pages is built and deployed by the included Actions workflow.
+## How it works
 
-## Deploy the frontend
-1. Merge this PR after reviewing it.
-2. In repository Settings → Pages, set the build source to **GitHub Actions**.
-3. Add repository Actions variables:
-   - `VITE_UPLOAD_API_URL`: deployed Worker origin, e.g. `https://forever-timeline-submissions.<account>.workers.dev`
-   - `VITE_TURNSTILE_SITE_KEY`: public Cloudflare Turnstile site key
-4. Push/merge to `main`; the workflow builds the Vite app and publishes `dist/`.
+- Timeline entries are stored in `public/data/memories.json`.
+- Photos are stored in `public/images/`.
+- The website is read-only. There is no public upload form, backend, Cloudflare Worker, or external upload service.
+- GitHub Actions builds and deploys the site whenever changes are pushed to `main`.
 
-## Deploy public submission API
-1. Install Wrangler and authenticate with Cloudflare.
-2. Create a KV namespace: `wrangler kv namespace create RATE_LIMIT`.
-3. Put its returned ID in `worker/wrangler.toml`.
-4. Create a Cloudflare Turnstile widget allowing `wrisov.github.io`.
-5. From `worker/`, run `wrangler secret put GITHUB_TOKEN` and `wrangler secret put TURNSTILE_SECRET`.
-6. The GitHub fine-grained token must be restricted to this repository and have **Contents: Read and write**. Never expose it in frontend variables.
-7. Run `wrangler deploy`.
+## Add a memory manually
 
-The Worker allows only the configured site origin, verifies Turnstile, caps images at 5 MB, validates image signatures and applies a per-IP hourly limit. Public uploads are still untrusted: review queued files and delete spam submissions.
+1. Add your photo(s) to a folder under `public/images/`. A useful convention is `public/images/YYYY/MM/`, for example `public/images/2026/11/`.
+2. Open `public/data/memories.json` and add an object to the top-level array:
 
-## Publish a reviewed submission
-- Inspect the JSON in `submissions/` and the corresponding file under `images/pending/`.
-- If approved, move/copy the image into `public/images/YYYY/MM/` and add a memory record to `public/data/memories.json` using that public image path.
-- Delete the pending JSON and pending image in the same review commit.
-- Do not publish personal or sensitive images without consent.
+```json
+{
+  "id": "first-coffee-together",
+  "date": "2026-11-18",
+  "title": "Our first coffee together",
+  "tagline": "A little moment, kept forever",
+  "description": "A short note about the day.",
+  "images": [
+    "images/2026/11/first-coffee-together.jpg"
+  ]
+}
+```
 
-## Local development
+3. Use a unique `id`, a valid `YYYY-MM-DD` date, and image paths relative to the `public/` directory. If a memory has multiple photos, add multiple paths to the `images` array. Use an empty array when there are no photos.
+4. Commit and push the changes to `main`. GitHub Actions will build and publish the updated timeline.
+
+The image path in the JSON is relative to the site's base URL; do not include the `public/` prefix.
+
+## Run locally
+
+Requires Node.js 20 or newer.
+
 ```bash
+git clone https://github.com/wrisov/forever-timeline.git
+cd forever-timeline
 npm install
 npm run dev
-npm run build
 ```
-Uploads require the deployed Worker and Turnstile configuration.
+
+Open the local URL printed by Vite (usually `http://localhost:5173/forever-timeline/`).
+
+To test the production build:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deploy
+
+1. In repository Settings → Pages, choose **GitHub Actions** as the build and deployment source.
+2. Push or merge changes to `main`.
+3. The workflow installs dependencies, runs `npm run build`, and deploys the generated `dist/` directory.
+
+No Cloudflare account, API token, Worker secrets, CAPTCHA keys, or repository Actions variables are needed.
