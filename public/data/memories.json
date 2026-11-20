@@ -54,5 +54,13 @@
     "tagline": "A day to remember",
     "description": "",
     "images": ["images/2026/firstdate.jpeg"]
+  },
+  {
+    "id": "Man-with-car",
+    "date": "2026-11-15",
+    "title": "Man and his questionalbe love for depreciating asset",
+    "tagline": "Concerning!...",
+    "description": "",
+    "images": ["images/2026/Wrisov_with_his_first_love.jpeg"]
   }
 ]
